@@ -4,15 +4,16 @@ runs:
   using: "composite"
   steps:
     - name: Setup Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: 3.9
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.9
 
     - name: Read Terraform version
-        run: |
-          echo "terraform_version=$(cat .terraform-version)" >> $GITHUB_ENV
-          printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
-          echo "Selected Terraform version $(cat .terraform-version)" >> $GITHUB_STEP_SUMMARY
+      run: |
+        echo "terraform_version=$(cat .terraform-version)" >> $GITHUB_ENV
+        printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
+        echo "Selected Terraform version $(cat .terraform-version)" >> $GITHUB_STEP_SUMMARY
+      shell: bash
 
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v3
