@@ -9,6 +9,7 @@ on:
         description: "The environment to deploy to (e.g., development, test, staging)"
         required: true
         default: "development"
+        type: string
       run_terraform_apply:
         description: "Run terraform apply?"
         required: true
