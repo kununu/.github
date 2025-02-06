@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup Environment
-        uses: ./.github/actions/setup-environment
+        uses: kununu/.github/.github/actions/setup-environment@kundevops-2897-centralize-workflows
 
       - name: Run Tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
