@@ -1,0 +1,34 @@
+name: Run pre-commit hooks
+run-name: Run pre-commit hooks. Triggered by @${{ github.actor }}
+
+on:
+  workflow_call:
+
+jobs:
+  pre-commit:
+    name: pre-commit/run
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Run Tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+
+      - name: Get changed files
+        id: files_changed
+        uses: tj-actions/changed-files@v44
+
+      # Review this step
+      - name: Run Pre-commit
+        uses: pre-commit/action@v3.0.0
+        env:
+          SKIP: no-commit-to-branch, terraform_docs
+        with:
+          extra_args: --files ${{steps.files_changed.outputs.all_changed_files}}

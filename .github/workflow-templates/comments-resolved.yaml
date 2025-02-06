@@ -1,0 +1,9 @@
+name: Ensure Comments Resolved
+run-name: Ensure Comments Resolved. Triggered by @${{ github.actor }}
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  check-comments:
+    uses: kununu/github-actions-workflows/.github/workflows/comments_resolved_by_author.yaml@kundevops-2897-centralize-workflows

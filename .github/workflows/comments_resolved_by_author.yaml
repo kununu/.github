@@ -1,0 +1,35 @@
+name: Ensure Comments Resolved
+run-name: Ensure Comments Resolved. Triggered by @${{ github.actor }}
+on:
+  workflow_call:
+jobs:
+  check-comments:
+    name: Check for unresolved comments
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Check for unresolved comments
+      run: |
+        unresolved_comments=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments | map(select(.isResolved == false)) | length')
+        if [ "$unresolved_comments" -ne 0 ]; then
+          echo "There are unresolved comments."
+          exit 1
+        fi
+    - name: Verify comment resolution by author
+      if: success()
+      run: |
+        comments=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments')
+        for comment in $(echo "${comments}" | jq -c '.[]'); do
+          is_resolved=$(echo "${comment}" | jq -r '.isResolved')
+          author=$(echo "${comment}" | jq -r '.author.login')
+          resolved_by=$(echo "${comment}" | jq -r '.resolvedBy.login')
+          if [ "$is_resolved" == "true" ] && [ "$author" != "$resolved_by" ]; then
+            echo "Comment resolved by someone other than the author: $resolved_by"
+            exit 1
+          fi
+        done
+      continue-on-error: false
+      #comments for effect

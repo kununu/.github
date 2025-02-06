@@ -1,0 +1,186 @@
+name: 'Deploy'
+run-name: Deploy to AWS by @${{ github.actor }}
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+inputs:
+  # Deploy to development and test should only be to those environments. Staging deploys should succeed to test from before
+  environment:
+    description: "The environment to deploy to (e.g., development, test, staging)"
+    required: true
+    default: "development"
+    type: choice
+    options:
+      - development
+      - test
+  run_terraform_apply:
+    description: "Run terraform apply?"
+    required: true
+    default: false
+    type: boolean
+
+permissions:
+   # Allow repository checkout
+  contents: read
+  # Required to get the ID Token that will be used for OIDC
+  id-token: write
+
+env:
+  aws_region: "eu-west-1"
+  aws_oidc_role_arn: "arn:aws:iam::339713083458:role/GitHubOIDCkununuAccessRole"
+jobs:
+  validate-aws-access:
+    name: Validate AWS access (CICD)
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      # replace any of these with GitHub Actions variables and use var.* instead of env.* if needed.
+      # for example replace var.aws_region instead of env.aws_region
+      - id: set-common-variables
+        name: Set common variables
+        run: |
+          environment=${{ inputs.environment || 'development' }}
+          case $environment in
+            development)
+            aws_account_id=471112841961
+            ;;
+            test)
+            aws_account_id=637423657022
+            ;;
+            staging)
+            aws_account_id=891376915771
+            ;;
+            production)
+            aws_account_id=654654185437
+            ;;
+            esac
+
+          echo "aws_account_id=$aws_account_id" >> "$GITHUB_ENV"
+          echo "aws_role_arn=arn:aws:iam::$aws_account_id:role/${{ github.event.repository.name }}-repo" >> "$GITHUB_ENV"
+
+      - id: assume-GitHubOIDCkununuAccessRole-role
+        name: get GitHubOIDCkununuAccessRole AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.aws_region }}
+          role-to-assume: ${{ env.aws_oidc_role_arn }}
+          role-session-name: ${{ github.actor_id }}-${{ github.run_id }}
+          mask-aws-account-id: false # masking would affect unrelated steps if configured
+      - id: assume-repo-role
+        name: Configure repo specific AWS Creentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region:  ${{ env.aws_region }}
+          role-to-assume: ${{ env.aws_role_arn }}
+          role-session-name: ${{ github.actor_id }}-${{ github.run_id }}
+          role-chaining: true
+          mask-aws-account-id: false # masking would affect unrelated steps if configured
+      - name: Verify AWS access
+        id: verify-aws-access
+        shell: bash
+        run: |
+          aws sts get-caller-identity --query Arn --output text
+    outputs:
+      aws_region: ${{ env.aws_region}}
+      aws_role_arn: ${{ env.aws_role_arn }}
+
+  validate-terraform:
+    name: Validate infrastructure code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract role ARNs from all .tfbackend files
+        id: extract-role-arns
+        run: |
+          # Iterate over all .tfbackend files in the environments folder
+          for file in environments/*.tfbackend; do
+            env_name=$(basename "$file" .tfbackend)
+
+            role_arn=$(grep 'role_arn' "$file" | awk -F'"' '{print $2}')
+
+            # Print the extracted role ARN for debugging
+            echo "${env_name} Role ARN: $role_arn"
+
+            # Set the role ARN as an output for this job using the environment name
+            echo "${env_name}_role_arn=$role_arn" >> $GITHUB_OUTPUT
+          done
+
+      - name: Read Terraform version
+        id: read-terraform-version
+        run: |
+          terraform_version=$(grep 'required_version' terraform/main.tf | sed -E 's/.*\"~> *(.*)\".*/\1/')
+          echo "terraform_version=$terraform_version" >> $GITHUB_ENV
+          echo "## Infrastructure" >> $GITHUB_STEP_SUMMARY
+          echo "Selected Terraform version $terraform_version" >> $GITHUB_STEP_SUMMARY
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.terraform_version }}
+
+      - name: Terraform init
+        run: terraform -chdir="terraform" init -no-color -backend=false
+
+      - name: Validate Terraform
+        run: terraform -chdir="terraform" validate -no-color
+
+      - name: Check Terraform formatting
+        run: terraform -chdir="terraform" fmt -check -recursive -no-color
+    outputs:
+      development_role_arn: ${{ steps.extract-role-arns.outputs.development_role_arn }}
+      test_role_arn: ${{ steps.extract-role-arns.outputs.test_role_arn }}
+      staging_role_arn: ${{ steps.extract-role-arns.outputs.staging_role_arn }}
+      production_role_arn: ${{ steps.extract-role-arns.outputs.production_role_arn }}
+
+  # The following jobs will be triggered on
+  # push to main: deploy development -> test -> staging -> production
+  # manualy: development, test
+  # every pr change: plan development
+  deploy-development:
+    name: Development Env
+    needs: [validate-aws-access, validate-terraform]
+    # For now let's make this the default environment to be triggered uppon a push/pr event
+    if: ${{ inputs.environment == 'development' || github.event_name == 'push' || github.event_name == 'pull_request' }}
+    uses: kununu/.github/.github/workflows/deploy_infrastructure.yaml@kundevops-2897-centralize-workflows
+    with:
+      environment_name: 'development'
+      run_terraform_apply: ${{ inputs.run_terraform_apply || github.ref == 'refs/heads/main' || false }}
+
+  # We want to run test for when a staging deployment is triggered, as well as when a push event happens to main.
+  # Since needs doesn't support conditionals, we need two different jobs for this
+  deploy-test-independent:
+    name: Testing Env (Direct Trigger)
+    needs: [validate-aws-access, validate-terraform]
+    if: ${{ inputs.environment == 'test'}}
+    uses: kununu/.github/.github/workflows/deploy_infrastructure.yaml@kundevops-2897-centralize-workflows
+    with:
+      environment_name: 'test'
+      run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
+
+  deploy-test:
+    name: Testing Env
+    needs: [deploy-development]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    uses: kununu/.github/.github/workflows/deploy_infrastructure.yaml@kundevops-2897-centralize-workflows
+    with:
+      environment_name: 'test'
+      run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
+
+  deploy-staging:
+    name:  Staging Env
+    needs: [deploy-test]
+    uses: kununu/.github/.github/workflows/deploy_infrastructure.yaml@kundevops-2897-centralize-workflows
+    with:
+      environment_name: 'staging'
+      run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
+
+  deploy-production:
+    name: Production Env
+    needs: [deploy-staging]
+    uses: kununu/.github/.github/workflows/deploy_infrastructure.yaml@kundevops-2897-centralize-workflows
+    with:
+      environment_name: 'production'

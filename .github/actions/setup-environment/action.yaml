@@ -1,0 +1,30 @@
+name: "Setup Environment"
+description: "Sets up Python, Go, Terraform, and TFLint"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.9
+
+    - name: Read Terraform version
+        run: |
+          echo "terraform_version=$(cat .terraform-version)" >> $GITHUB_ENV
+          printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
+          echo "Selected Terraform version $(cat .terraform-version)" >> $GITHUB_STEP_SUMMARY
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.terraform_version }}
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.20
+
+    - name: Run TfLint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: v0.52.0
