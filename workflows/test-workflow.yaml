@@ -1,0 +1,11 @@
+name: Test Workflow
+
+on:
+  pull_request:
+
+jobs:
+  say_hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test workflow execution
+        run: echo "This is a test workflow. Ignore this run"
