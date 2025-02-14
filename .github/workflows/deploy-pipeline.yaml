@@ -54,6 +54,11 @@ jobs:
         uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
         with:
           environment_name: ${{ inputs.environment }}
+      - name: Verify AWS access
+        id: verify-aws-access
+        shell: bash
+        run: |
+          aws sts get-caller-identity --query Arn --output text
 
     outputs:
       aws_region: ${{ env.aws_region}}
