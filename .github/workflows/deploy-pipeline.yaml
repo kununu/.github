@@ -51,7 +51,7 @@ jobs:
       # replace any of these with GitHub Actions variables and use var.* instead of env.* if needed.
       # for example replace var.aws_region instead of env.aws_region
       - name: Configure AWS credentials
-        uses: kununu/.github/.github/actions/get-aws-credentials-for-environmenth@kundevops-2897-centralize-workflows
+        uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
         with:
           environment_name: ${{ inputs.environment_name }}
 
