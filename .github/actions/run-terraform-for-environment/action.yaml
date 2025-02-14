@@ -18,7 +18,7 @@ runs:
   using: "composite"
   steps:
     - name: "Initialize environment ${{ inputs.environment_name }}"
-      uses: kununu/.github/.github/actions/init-terraform-for-environment@kundevops-2897-centralize-workflows
+      uses: kununu/.github/.github/actions/init-terraform-for-environment@main
       with:
         environment_name: ${{ inputs.environment_name }}
         run_terraform_apply: ${{ inputs.run_terraform_apply }}

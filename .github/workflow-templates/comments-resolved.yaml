@@ -6,4 +6,4 @@ on:
 
 jobs:
   check-comments:
-    uses: kununu/github-actions-workflows/.github/workflows/comments_resolved_by_author.yaml@kundevops-2897-centralize-workflows
+    uses: kununu/github-actions-workflows/.github/workflows/comments_resolved_by_author.yaml@main

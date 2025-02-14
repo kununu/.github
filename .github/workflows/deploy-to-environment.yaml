@@ -30,7 +30,7 @@ jobs:
   run-terraform-against-environment:
     runs-on: ubuntu-latest
     steps:
-    - uses: kununu/.github/.github/actions/run-terraform-for-environment@kundevops-2897-centralize-workflows
+    - uses: kununu/.github/.github/actions/run-terraform-for-environment@main
       with:
         environment_name: ${{ inputs.environment_name }}
         run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}

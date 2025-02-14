@@ -21,7 +21,7 @@ runs:
       uses: actions/checkout@v4
 
     - name: Get aws credentials environment
-      uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
+      uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@main
       with:
         environment_name: ${{ inputs.environment_name }}
 
