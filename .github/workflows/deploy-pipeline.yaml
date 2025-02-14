@@ -89,7 +89,7 @@ jobs:
     needs: [validate-aws-access, validate-terraform]
     # For now let's make this the default environment to be triggered uppon a push/pr event
     if: ${{ inputs.environment == 'development' || github.event_name == 'push' || github.event_name == 'pull_request' }}
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
+    uses: kununu/.github/.github/workflows/deploy-to-environment.yaml@kundevops-2897-centralize-workflows
     with:
       environment_name: 'development'
       run_terraform_apply: ${{ inputs.run_terraform_apply || github.ref == 'refs/heads/main' || false }}
@@ -100,7 +100,7 @@ jobs:
     name: Testing Env (Direct Trigger)
     needs: [validate-aws-access, validate-terraform]
     if: ${{ inputs.environment == 'test'}}
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
+    uses: kununu/.github/.github/workflows/deploy-to-environment.yaml@kundevops-2897-centralize-workflows
     with:
       environment_name: 'test'
       run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
@@ -109,7 +109,7 @@ jobs:
     name: Testing Env
     needs: [deploy-development]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
+    uses: kununu/.github/.github/workflows/deploy-to-environment.yaml@kundevops-2897-centralize-workflows
     with:
       environment_name: 'test'
       run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
@@ -117,7 +117,7 @@ jobs:
   deploy-staging:
     name:  Staging Env
     needs: [deploy-test]
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
+    uses: kununu/.github/.github/workflows/deploy-to-environment.yaml@kundevops-2897-centralize-workflows
     with:
       environment_name: 'staging'
       run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
@@ -125,6 +125,6 @@ jobs:
   deploy-production:
     name: Production Env
     needs: [deploy-staging]
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
+    uses: kununu/.github/.github/workflows/deploy-to-environment.yaml@kundevops-2897-centralize-workflows
     with:
       environment_name: 'production'
