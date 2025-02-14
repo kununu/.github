@@ -1,5 +1,5 @@
 name: "Run terraform against environment"
-description: "Composite action to run Terraform against an environment (aka aws account)"
+description: "Intialize Terraform against an environment (aka aws account)"
 inputs:
   environment_name:
     description: "The environment name"
@@ -29,6 +29,7 @@ runs:
       shell: bash
 
       run: |
+        # terraform version
         echo "terraform_version=$(cat .terraform-version)" >> $GITHUB_ENV
         printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
         echo "Selected Terraform version $(cat .terraform-version)" >> $GITHUB_STEP_SUMMARY
@@ -44,4 +45,5 @@ runs:
       name: Terraform init
       # This step does not require the output from load-terraform-data-ssm
       run: >-
+        # terraform init
         terraform -chdir="$(git rev-parse --show-toplevel)/terraform" init -no-color -var-file="../environments/${{ inputs.environment_name }}.tfvars" -backend-config="../environments/${{ inputs.environment_name }}.tfbackend"

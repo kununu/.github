@@ -3,7 +3,7 @@ description: "configure aws credentials for specific environment (aka aws accoun
 
 inputs:
   environment_name:
-    description: "The environment to authenticate against to (e.g., development, test, staging, production)"
+    description: "The environment (aka. aws account) to authenticate against to (e.g., development, test, staging, production)"
     required: true
     default: "development"
 
@@ -25,6 +25,7 @@ runs:
     - name: Set common variables
       shell: bash
       run: |
+        # Set common variables for aws.
         case ${{inputs.environment_name }} in
           development)
           aws_account_id=471112841961

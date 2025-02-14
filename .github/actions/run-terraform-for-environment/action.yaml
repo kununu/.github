@@ -1,8 +1,8 @@
 name: "Run terraform against environment"
-description: "Composite action to run Terraform against an environment (aka aws account)"
+description: "Run Terraform against an environment (aka aws account)"
 inputs:
   environment_name:
-    description: "The environment name"
+    description: "Environment name"
     required: true
     default: "development"
   run_terraform_apply:
@@ -27,6 +27,7 @@ runs:
       shell: bash
       name: Terraform plan
       run: |
+        # terraform plan 
         printf 0 > /tmp/terraform_plan_status
         terraform -chdir="$(git rev-parse --show-toplevel)/terraform" plan -no-color -detailed-exitcode -input=false -lock-timeout=60s -var-file=<(cat environments/${{ inputs.environment_name }}.tfvars environments/common.tfvars) -out=terraform.tfplan || printf "%d" "$?" > /tmp/terraform_plan_status
         # Use result to decide what happens next
@@ -59,8 +60,8 @@ runs:
         inputs.environment_name != 'production') ||
         (github.event_name == 'push' && github.ref == 'refs/heads/main')
       run: |
+        # terraform apply
         apply_status=0
-        # apply Terraform and save error status
         terraform -chdir="$(git rev-parse --show-toplevel)/terraform" apply -no-color -auto-approve -lock-timeout=60s -no-color terraform.tfplan > /tmp/terraform_apply_output || apply_status=$0
         # Record what happened
         cat /tmp/terraform_apply_output
