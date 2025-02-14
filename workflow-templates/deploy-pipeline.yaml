@@ -1,0 +1,55 @@
+name: 'Deploy'
+run-name: Deploy to AWS by @${{ github.actor }}
+
+# The workflow should only trigger on push events to the main branch
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - '**'
+    paths:
+      - '**.tf'
+
+
+  workflow_dispatch:
+    inputs:
+      # Deploy to development and test should only be to those environments. Staging deploys should succeed to test from before
+      environment:
+        description: "The environment to deploy to (e.g., development, test, staging)"
+        required: true
+        default: "development"
+        type: choice
+        options:
+          - development
+          - test
+      run_terraform_apply:
+        description: "Run terraform apply?"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  # Allow repository checkout
+  contents: read
+  # Required to get the ID Token that will be used for OIDC
+  id-token: write
+
+# Set env vars like this
+env:
+  aws_region: "eu-west-1"
+  aws_oidc_role_arn: "arn:aws:iam::339713083458:role/GitHubOIDCkununuAccessRole"
+
+jobs:
+  pre-commit:
+    uses: kununu/.github/.github/workflows/pre-commit.yaml
+  deploy:
+    uses: kununu/.github/.github/workflows/gta-deployment.yaml
+    with:
+      environment: ${{ inputs.environment }}
+      run_terraform_apply: ${{ inputs.run_terraform_apply }}
