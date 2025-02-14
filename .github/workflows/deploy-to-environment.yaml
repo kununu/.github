@@ -5,8 +5,8 @@ on:
   workflow_call:
     inputs:
         # Deploy to development and test should only be to those environments. Staging deploys should succeed to test from before
-      environment:
-        description: "The environment to deploy to (e.g., development, test, staging)"
+      environment_name:
+        description: "The environment to deploy to (e.g., development, test, staging, production)"
         required: true
         default: "development"
         type: string
@@ -32,5 +32,5 @@ jobs:
     steps:
     - uses: kununu/.github/.github/actions/run-terraform-for-environment@kundevops-2897-centralize-workflows
       with:
-        environment_name: 'staging'
+        environment_name: ${{ inputs.environment_name }}
         run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
