@@ -2,24 +2,20 @@ name: 'Deploy Pipeline'
 run-name: Deploy to AWS environments by @${{ github.actor }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      # Deploy to development and test should only be to those environments. Staging deploys should succeed to test from before
+        # Deploy to development and test should only be to those environments. Staging deploys should succeed to test from before
       environment:
         description: "The environment to deploy to (e.g., development, test, staging)"
         required: true
         default: "development"
-        type: choice
-        options:
-          - development
-          - test
-          - staging
-          - production
+        type: string
       run_terraform_apply:
         description: "Run terraform apply?"
         required: true
         default: false
         type: boolean
+
 
 permissions:
    # Allow repository checkout
