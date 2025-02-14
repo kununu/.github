@@ -4,6 +4,7 @@ inputs:
   environment_name:
     description: "The environment name"
     required: true
+    default: "development"
   run_terraform_apply:
     description: "Flag to run Terraform apply"
     required: false
@@ -19,7 +20,7 @@ runs:
     - name: Check out
       uses: actions/checkout@v4
 
-    - name: "Get aws credentials fpr ${{ inputs.environment_name }}"
+    - name: Get aws credentials environment
       uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
       with:
         environment_name: ${{ inputs.environment_name }}

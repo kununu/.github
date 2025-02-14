@@ -4,6 +4,7 @@ inputs:
   environment_name:
     description: "The environment name"
     required: true
+    default: "development"
   run_terraform_apply:
     description: "Flag to run Terraform apply"
     required: false
