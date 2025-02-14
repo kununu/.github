@@ -113,10 +113,12 @@ jobs:
     name: Testing Env
     needs: [deploy-development]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    uses: kununu/.github/.github/workflows/deploy-to-environment@kundevops-2897-centralize-workflows
-    with:
-      environment_name: 'test'
-      run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kununu/.github/.github/actions/run-terraform-for-environment@kundevops-2897-centralize-workflows
+        with:
+          environment_name: 'test'
+          run_terraform_apply: ${{ inputs.run_terraform_apply ||  github.ref == 'refs/heads/main' || false }}
 
   deploy-staging:
     name:  Staging Env
@@ -130,7 +132,7 @@ jobs:
 
   deploy-production:
     name: Production Env
-    needs: [deploy-staging]
+    needs: [ deploy-staging]
     runs-on: ubuntu-latest
     steps:
       - uses: kununu/.github/.github/actions/run-terraform-for-environment@kundevops-2897-centralize-workflows
