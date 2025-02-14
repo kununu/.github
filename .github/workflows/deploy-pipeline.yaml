@@ -1,5 +1,5 @@
-name: 'Deploy'
-run-name: Deploy to AWS by @${{ github.actor }}
+name: 'Deploy Pipeline'
+run-name: Deploy to AWS environments by @${{ github.actor }}
 
 on:
   workflow_call:

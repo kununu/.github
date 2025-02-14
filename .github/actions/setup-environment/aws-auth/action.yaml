@@ -1,0 +1,64 @@
+name: "get-aws-credentials-for-environment"
+description: "configure aws credentials for specific environment (aka aws account)"
+
+inputs:
+  environment_name:
+    description: "The environment to authenticate against to (e.g., development, test, staging, production)"
+    required: true
+    default: "development"
+
+runs:
+  using: "composite"
+  steps:
+    # Don't allow re-running deploys to a production environment
+    - name: Fail on repeated run
+      shell: bash
+      if: ${{ contains('["production"]', inputs.environment_name ) && github.run_attempt != 1 }}
+      run: |
+        printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
+        printf "Deploy was *prohibited* as this is a rerun\n\n" >> $GITHUB_STEP_SUMMARY
+        printf "To deploy to the _%q_ environment, trigger a new workflow\n" '${{ inputs.environment_name }}' >> $GITHUB_STEP_SUMMARY
+        false # fail at this point
+
+    # replace any of these with GitHub Actions variables and use var.* instead of env.*
+    # for example replace var.aws_region instea of env.aws_region
+    - name: Set common variables
+      shell: bash
+      run: |
+        case ${{inputs.environment_name }} in
+          development)
+          aws_account_id=471112841961
+          ;;
+          test)
+          aws_account_id=637423657022
+          ;;
+          staging)
+          aws_account_id=891376915771
+          ;;
+          production)
+          aws_account_id=654654185437
+          ;;
+          esac
+
+        echo "aws_account_id=$aws_account_id" >> "$GITHUB_ENV"
+        echo "aws_role_arn=arn:aws:iam::$aws_account_id:role/${{ github.event.repository.name }}-repo" >> "$GITHUB_ENV"
+
+    # i would like to have this step as a reusable workflow but we cant parse credentials between jobs see https://github.com/orgs/community/discussions/66044
+    - name: get GitHubOIDCkununuAccessRole AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.aws_region }}
+        role-to-assume: ${{ env.aws_oidc_role_arn }}
+        role-session-name: ${{ github.actor_id }}-${{ github.run_id }}
+        mask-aws-account-id: false # masking would affect unrelated steps if configured
+        disable-retry: true
+
+    - name: Configure repo specific AWS Creentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.aws_region }}
+        role-to-assume: ${{ env.aws_role_arn }}
+        role-session-name: ${{ github.actor_id }}-${{ github.run_id }}
+        role-chaining: true
+        mask-aws-account-id: false # masking would affect unrelated steps if configured
+        disable-retry: true
