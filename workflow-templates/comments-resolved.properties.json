@@ -1,0 +1,8 @@
+{
+    "name": "Kununu check comments resolved by author",
+    "description": "this Pipeline checks if all comments are resolved by the author otherwise fails. If this is to restrictive use it as a warning check",
+    "iconName": "octicon comment-discussion ",
+    "categories": [
+        "code-review"
+    ]
+}
