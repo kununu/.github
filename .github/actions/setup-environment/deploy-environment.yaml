@@ -33,7 +33,7 @@ jobs:
           false # fail at this point
 
       - name: Configure AWS credentials
-        uses: kununu/.github/.github/actions/aws-auth@kundevops-2897-centralize-workflows
+        uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
         with:
           environment_name: ${{ inputs.environment_name }}
 
