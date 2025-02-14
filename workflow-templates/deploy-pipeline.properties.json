@@ -1,6 +1,6 @@
 {
     "name": "Kununu Deploy Pipeline",
-    "description": "Provides an out of the box deploy pipeline for your kununu application. \n It provides manual, deploys to development and test environments automatic deploys to production on push to main. deployments to the next stage only happen if the previous stage was successful.",
+    "description": "Provides an out of the box deploy pipeline for your kununu application. Manualy trigger a dry-run or deployment to development and test environments. Automaticaly deploys to production on push to main. Deployments to the next stage only happen if the previous stage was successful.",
     "iconName": "octicon rocket",
     "categories": [
         "deployment",
