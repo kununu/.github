@@ -1,0 +1,46 @@
+name: "Run terraform against environment"
+description: "Composite action to run Terraform against an environment (aka aws account)"
+inputs:
+  environment_name:
+    description: "The environment name"
+    required: true
+  run_terraform_apply:
+    description: "Flag to run Terraform apply"
+    required: false
+    default: "false"
+outputs:
+  deploy_mode:
+    description: "The deploy mode"
+    value: ${{ steps.save-terraform-outputs.outputs.deploy_mode }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out
+      uses: actions/checkout@v4
+
+    - name: "Get aws credentials fpr ${{ inputs.environment_name }}"
+      uses: ./.github/actions/get-aws-credentials-for-environment
+      with:
+        environment_name: ${{ inputs.environment_name }}
+
+    - name: Read Terraform version
+      shell: bash
+
+      run: |
+        echo "terraform_version=$(cat .terraform-version)" >> $GITHUB_ENV
+        printf "## Infrastructure\n" >> $GITHUB_STEP_SUMMARY
+        echo "Selected Terraform version $(cat .terraform-version)" >> $GITHUB_STEP_SUMMARY
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_wrapper: false #TODO: do we need this?
+        terraform_version: ${{ env.terraform_version }}
+
+    - id: terraform-init
+      shell: bash
+      name: Terraform init
+      # This step does not require the output from load-terraform-data-ssm
+      run: >-
+        terraform -chdir="$(git rev-parse --show-toplevel)/terraform" init -no-color -var-file="../environments/${{ inputs.environment_name }}.tfvars" -backend-config="../environments/${{ inputs.environment_name }}.tfbackend"

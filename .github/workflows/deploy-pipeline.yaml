@@ -68,51 +68,16 @@ jobs:
     name: Validate infrastructure code
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Extract role ARNs from all .tfbackend files
-        id: extract-role-arns
-        run: |
-          # Iterate over all .tfbackend files in the environments folder
-          for file in environments/*.tfbackend; do
-            env_name=$(basename "$file" .tfbackend)
-
-            role_arn=$(grep 'role_arn' "$file" | awk -F'"' '{print $2}')
-
-            # Print the extracted role ARN for debugging
-            echo "${env_name} Role ARN: $role_arn"
-
-            # Set the role ARN as an output for this job using the environment name
-            echo "${env_name}_role_arn=$role_arn" >> $GITHUB_OUTPUT
-          done
-
-      - name: Read Terraform version
-        id: read-terraform-version
-        run: |
-          terraform_version=$(grep 'required_version' terraform/main.tf | sed -E 's/.*\"~> *(.*)\".*/\1/')
-          echo "terraform_version=$terraform_version" >> $GITHUB_ENV
-          echo "## Infrastructure" >> $GITHUB_STEP_SUMMARY
-          echo "Selected Terraform version $terraform_version" >> $GITHUB_STEP_SUMMARY
-
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Initialize Terraform for ${{ inputs.environment }}
+        uses: kununu/.github/.github/actions/init-terraform-for-environment@kundevops-2897-centralize-workflows
         with:
-          terraform_version: ${{ env.terraform_version }}
-
-      - name: Terraform init
-        run: terraform -chdir="terraform" init -no-color -backend=false
+          environment_name: ${{ inputs.environment }}
 
       - name: Validate Terraform
         run: terraform -chdir="terraform" validate -no-color
 
       - name: Check Terraform formatting
         run: terraform -chdir="terraform" fmt -check -recursive -no-color
-    outputs:
-      development_role_arn: ${{ steps.extract-role-arns.outputs.development_role_arn }}
-      test_role_arn: ${{ steps.extract-role-arns.outputs.test_role_arn }}
-      staging_role_arn: ${{ steps.extract-role-arns.outputs.staging_role_arn }}
-      production_role_arn: ${{ steps.extract-role-arns.outputs.production_role_arn }}
 
   # The following jobs will be triggered on
   # push to main: deploy development -> test -> staging -> production

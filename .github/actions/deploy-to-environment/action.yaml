@@ -1,19 +1,6 @@
-name: "Deploy environment"
+name: "Deploy to environment"
 
 # The workflow should only trigger when indirectly invoked
-on:
-  workflow_call:
-    inputs:
-      environment_name:
-        required: true
-        type: string
-      run_terraform_apply:
-        type: boolean
-        default: false
-    outputs:
-      deploy_mode:
-        value: ${{ jobs.deploy-infrastructure.outputs.deploy_mode }}
-
 env:
   aws_region: "eu-west-1"
   aws_oidc_role_arn: "arn:aws:iam::339713083458:role/GitHubOIDCkununuAccessRole"
@@ -33,15 +20,9 @@ jobs:
           false # fail at this point
 
       - name: Configure AWS credentials
-        uses: kununu/.github/.github/actions/get-aws-credentials-for-environment@kundevops-2897-centralize-workflows
+        uses: ./.github/actions/get-aws-credentials-for-environment
         with:
           environment_name: ${{ inputs.environment_name }}
-
-      - name: Verify AWS access
-        id: verify-aws-access
-        shell: bash
-        run: |
-          aws sts get-caller-identity --query Arn --output text
 
       - name: Check out
         uses: actions/checkout@v4

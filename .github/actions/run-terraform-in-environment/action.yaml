@@ -1,0 +1,92 @@
+name: "Run terraform against environment"
+description: "Composite action to run Terraform against an environment (aka aws account)"
+inputs:
+  environment_name:
+    description: "The environment name"
+    required: true
+  run_terraform_apply:
+    description: "Flag to run Terraform apply"
+    required: false
+    default: "false"
+outputs:
+  deploy_mode:
+    description: "The deploy mode"
+    value: ${{ steps.save-terraform-outputs.outputs.deploy_mode }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Initialize environment ${{ inputs.environment_name }}"
+      uses: ./.github/actions/init-terraform-for-environment
+      with:
+        environment_name: ${{ inputs.environment_name }}
+        run_terraform_apply: ${{ inputs.run_terraform_apply }}
+
+    - id: plan-terraform
+      shell: bash
+      name: Terraform plan
+      run: |
+        printf 0 > /tmp/terraform_plan_status
+        terraform -chdir="$(git rev-parse --show-toplevel)/terraform" plan -no-color -detailed-exitcode -input=false -lock-timeout=60s -var-file=<(cat environments/${{ inputs.environment_name }}.tfvars environments/common.tfvars) -out=terraform.tfplan || printf "%d" "$?" > /tmp/terraform_plan_status
+        # Use result to decide what happens next
+
+        if [ "$( cat /tmp/terraform_plan_status )" = 1 ]; then
+          printf ":red_circle: Planning failed\n" >> $GITHUB_STEP_SUMMARY
+          printf "\n\n---\n\n" >> $GITHUB_STEP_SUMMARY
+          printf "See the detailed GitHub Action diagnostics for more details.\n" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # If the infrastructure is up to date there is no need to run a Terraform apply
+        cat /tmp/terraform_plan_status | grep -qE '^[02]$' # verify Terraform status; fail on error
+
+        printf "apply_required=%s\n" "$( if [ "$( cat /tmp/terraform_plan_status )" = 2 ] ; then echo -n true; else echo -n false; fi )" | tee --append "$GITHUB_OUTPUT"
+
+        if [ "$( cat /tmp/terraform_plan_status )" = 0 ]; then
+          printf ":white_circle: Infrastructure is up to date\n" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # emit saved error, if relevant
+        ( exit "$( if [ "$( cat /tmp/terraform_plan_status )" = 1 ] ; then echo -n 1; else echo -n 0; fi  )" )
+
+    - id: apply-terraform
+      shell: bash
+      name: Terraform apply
+      # Only run a Terraform apply if there are changes to make
+      if: >-
+        (github.event_name == 'workflow_dispatch' &&
+        inputs.run_terraform_apply == 'true' &&
+        inputs.environment_name != 'production') ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      run: |
+        apply_status=0
+        # apply Terraform and save error status
+        terraform -chdir="$(git rev-parse --show-toplevel)/terraform" apply -no-color -auto-approve -lock-timeout=60s -no-color terraform.tfplan > /tmp/terraform_apply_output || apply_status=$0
+        # Record what happened
+        cat /tmp/terraform_apply_output
+        if [ "$apply_status" = 0 ] && grep -q '^Apply complete!' /tmp/terraform_apply_output; then
+          printf ":green_circle: *%s*\n" "$( grep  '^Apply complete! Resources: ' /tmp/terraform_apply_output )">> $GITHUB_STEP_SUMMARY
+        else
+          printf ":red_circle: *%s*\n\n" "Infrastructure change(s) failed.">> $GITHUB_STEP_SUMMARY
+          printf "<details open>\n<summary>Terraform apply output</summary>\n\n\`\`\`\n" >> $GITHUB_STEP_SUMMARY
+          printf "%s\n" "$( cat /tmp/terraform_apply_output )" >> $GITHUB_STEP_SUMMARY
+          printf "\`\`\`\n</details>\n\n" >> $GITHUB_STEP_SUMMARY
+          # Print out errors provided there were not too many of them.
+          if [ "$( grep -c Error: /tmp/terraform_apply_output )" -lt 5 ]; then
+            printf "\n\n---\n\n" >> $GITHUB_STEP_SUMMARY
+            grep Error: /tmp/terraform_apply_output >> $GITHUB_STEP_SUMMARY
+          fi
+          printf "\n\n---\n\n" >> $GITHUB_STEP_SUMMARY
+          printf "See the detailed GitHub Action diagnostics for more details.\n" >> $GITHUB_STEP_SUMMARY
+        fi
+        ( exit $apply_status ) # emit saved error, if any
+
+    - id: save-terraform-outputs
+      shell: bash
+      name: Save Terraform outputs
+      run: |
+        # Save outputs (provided they are set, are plain values, and are not sensitive)
+        terraform -chdir="$(git rev-parse --show-toplevel)/terraform" output -json |\
+          jq 'to_entries[] | select(.value.sensitive == false) | select(.value.type as $type | ["bool","string","number"]|any(. == $type))' |\
+          jq 'select(.value.value != null)' |\
+          jq -r ' .key + "=" + (.value.value|tostring)' |\
+          tee --append "$GITHUB_OUTPUT"
