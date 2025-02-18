@@ -50,5 +50,5 @@ jobs:
   deploy:
     uses: kununu/shared-github-workflows/.github/workflows/gta-deployment.yaml
     with:
-      environment: ${{ inputs.environment }}
-      run_terraform_apply: ${{ inputs.run_terraform_apply }}
+      environment: ${{ inputs.environment || 'development' }}
+      run_terraform_apply: ${{ inputs.run_terraform_apply || false }}
