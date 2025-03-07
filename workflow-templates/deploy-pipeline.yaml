@@ -42,7 +42,6 @@ permissions:
 # Set env vars like this
 env:
   aws_region: "eu-west-1"
-  aws_oidc_role_arn: "arn:aws:iam::339713083458:role/GitHubOIDCkununuAccessRole"
 
 jobs:
   pre-commit:
@@ -52,3 +51,4 @@ jobs:
     with:
       environment: ${{ inputs.environment || 'development' }}
       run_terraform_apply: ${{ inputs.run_terraform_apply || false }}
+    secrets: inherit
