@@ -45,9 +45,9 @@ env:
 
 jobs:
   pre-commit:
-    uses: kununu/shared-github-workflows/.github/workflows/pre-commit.yaml
+    uses: kununu/shared-github-workflows/.github/workflows/pre-commit@main
   deploy:
-    uses: kununu/shared-github-workflows/.github/workflows/gta-deployment.yaml
+    uses: kununu/shared-github-workflows/.github/workflows/gta-deployment@main
     with:
       environment: ${{ inputs.environment || 'development' }}
       run_terraform_apply: ${{ inputs.run_terraform_apply || false }}
